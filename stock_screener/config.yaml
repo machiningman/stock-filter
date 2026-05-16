@@ -1,0 +1,68 @@
+technical:
+  sma_short: 20
+  sma_long: 50
+  max_distance_from_sma20: 0.15
+  relative_strength_weeks: 13
+  sma_rising_lookback: 3
+
+fundamental_non_bank:
+  min_roe: 10
+  max_der: 1.5
+  min_revenue_growth_yoy: 0
+  min_profit_growth_yoy: -10
+  require_operating_cashflow_positive: true
+
+fundamental_bank:
+  min_roe: 10
+  max_pbv: 2.5
+  min_profit_growth_yoy: -10
+  max_gross_npl: 3
+
+scoring:
+  weights:
+    fundamental_quality: 0.35
+    earnings_momentum: 0.20
+    valuation: 0.15
+    technical_trend: 0.20
+    relative_strength: 0.10
+  normalization:
+    roe:
+      min: 0
+      target: 25
+    profit_growth_yoy:
+      min: -20
+      target: 30
+    per:
+      min: 30
+      target: 10
+      inverted: true
+    pbv:
+      min: 3.0
+      target: 1.0
+      inverted: true
+    distance_from_sma20:
+      min: 0.15
+      target: 0.02
+      inverted: true
+    relative_strength_13w:
+      min: -0.10
+      target: 0.10
+
+data:
+  ticker_suffix: ".JK"
+  index_ticker: "^JKSE"
+  cache_ttl_days: 7
+  price_history_months: 18
+
+classification:
+  min_data_completeness: 0.6
+
+sectors:
+  bank:
+    - "Bank"
+    - "Perbankan"
+    - "Financials - Bank"
+
+logging:
+  level: "INFO"
+  format: "[%(asctime)s] %(levelname)s: %(message)s"

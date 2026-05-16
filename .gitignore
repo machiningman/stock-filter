@@ -1,2 +1,34 @@
-.venv
-.opencode
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Cache & generated data
+stock_screener/data/cache/*.parquet
+stock_screener/data/cache/*.meta.json
+stock_screener/data/cache/*.tmp.*
+
+# Reports (generated)
+stock_screener/reports/*.csv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache/
+
+# opencode config (personal)
+.opencode/

@@ -1,0 +1,12 @@
+ticker,sector,revenue_growth_yoy,net_profit_growth_yoy,roe,der,per,pbv,dividend_yield,operating_cashflow_positive,gross_npl,nim,loan_growth_yoy
+BBCA,Bank,12.5,15.2,18.5,0.85,22.0,3.8,2.5,True,1.2,5.8,10.5
+BBRI,Bank,10.0,12.0,20.0,0.90,18.0,3.2,3.0,True,2.1,6.5,8.0
+BMNI,Bank,-5.0,-8.0,4.0,1.20,35.0,1.5,1.0,True,4.5,3.2,-2.0
+BBNI,Bank,8.0,5.0,12.0,1.10,15.0,1.8,2.0,True,3.0,4.5,6.0
+TLKM,Telecommunication,5.0,3.0,15.0,1.20,14.0,2.5,4.0,True,,,
+ASII,Automotive,8.0,10.0,18.0,0.80,10.0,2.0,3.5,True,,,
+UNVR,Consumer Goods,2.0,-1.0,40.0,0.50,25.0,12.0,5.0,True,,,
+PGAS,Energy,15.0,20.0,8.0,2.00,8.0,0.8,1.0,False,,,
+INDF,Consumer Goods,6.0,5.0,14.0,1.00,12.0,1.5,2.5,True,,,
+KLBF,Healthcare,10.0,12.0,22.0,0.30,30.0,8.0,1.5,True,,,
+GGRM,Consumer Goods,-2.0,-5.0,25.0,0.40,8.0,3.0,6.0,True,,,
