@@ -62,6 +62,9 @@ class TestNormalizeScore:
         assert score == pytest.approx(0.0)
         assert any("degenerate" in msg.lower() for msg in caplog.messages)
 
+    # NOTE: This tests normalize_score() for inverted metrics (PER, PBV).
+    # distance_from_sma20 scoring now uses calculate_technical_score() directly
+    # with two-sided absolute deviation (Formula B), NOT normalize_score().
     def test_normalize_score_negative_distance(self):
         """distance_from_sma20=-0.05 with inverted min=0.15, target=0.02 → clips to 100."""
         score = normalize_score(-0.05, min_val=0.15, target_val=0.02, inverted=True)
@@ -323,3 +326,111 @@ class TestFinalScore:
         # Clamp lower bound
         sub_scores3 = {"a": -50.0, "b": -50.0}
         assert calculate_final_score(sub_scores3, weights) == pytest.approx(0.0)
+
+
+# ===================================================================
+# Tests — calculate_technical_score (two-sided, Formula B)
+# ===================================================================
+
+
+def test_calculate_technical_score_at_target():
+    """Score is 100 when distance equals the target (0.02)."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    result = calculate_technical_score({"distance_from_sma20": 0.02}, cfg)
+    assert result == 100.0
+
+
+def test_calculate_technical_score_at_max_boundary():
+    """Score is 0 when |distance| equals the max boundary (0.15)."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    result = calculate_technical_score({"distance_from_sma20": 0.15}, cfg)
+    assert result == 0.0
+
+
+def test_calculate_technical_score_negative_distance():
+    """Negative distance scores proportionally, NOT 100."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    # abs(-0.05)=0.05; dev=max(0, 0.05-0.02)=0.03; score=(1-0.03/0.13)*100 ≈ 76.92
+    result = calculate_technical_score({"distance_from_sma20": -0.05}, cfg)
+    assert abs(result - 76.92) < 0.1
+
+
+def test_calculate_technical_score_deeply_negative():
+    """Very negative distance (beyond max_dev) scores 0."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    result = calculate_technical_score({"distance_from_sma20": -0.178}, cfg)
+    assert result == 0.0
+
+
+def test_calculate_technical_score_nan():
+    """NaN distance scores 0."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    result = calculate_technical_score({"distance_from_sma20": float("nan")}, cfg)
+    assert result == 0.0
+
+
+def test_calculate_technical_score_within_target_band():
+    """Distance within target band (|distance| <= 0.02) scores 100."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    # abs(0.01)=0.01; dev=max(0, 0.01-0.02)=0; score=100
+    result = calculate_technical_score({"distance_from_sma20": 0.01}, cfg)
+    assert result == 100.0
+
+
+def test_calculate_technical_score_at_zero():
+    """Distance of 0 (price exactly at SMA20) scores 100 (within target band)."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    # abs(0)=0; dev=max(0, 0-0.02)=0; score=100
+    result = calculate_technical_score({"distance_from_sma20": 0.0}, cfg)
+    assert result == 100.0
+
+
+def test_calculate_technical_score_positive_overshoot():
+    """Distance beyond max boundary on positive side scores 0."""
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.15, "target": 0.02}}}}
+    # abs(0.20)=0.20; dev=max(0, 0.20-0.02)=0.18; score=(1-0.18/0.13)*100 → clipped to 0
+    result = calculate_technical_score({"distance_from_sma20": 0.20}, cfg)
+    assert result == 0.0
+
+
+def test_calculate_technical_score_degenerate_config(caplog):
+    """min == target → max_dev=0 → returns 0 with warning."""
+    import logging
+    cfg = {"scoring": {"normalization": {"distance_from_sma20": {"min": 0.02, "target": 0.02}}}}
+    caplog.set_level(logging.WARNING)
+    result = calculate_technical_score({"distance_from_sma20": 0.02}, cfg)
+    assert result == 0.0
+    assert any("degenerate" in msg.lower() for msg in caplog.messages)
+
+
+# ===================================================================
+# Tests — apply_technical_filter (absolute distance fix)
+# ===================================================================
+
+
+def test_apply_technical_filter_deeply_oversold():
+    """Stock at distance=-0.178 must FAIL the filter (abs >= 0.15)."""
+    from stock_screener.src.pipeline import apply_technical_filter
+    features = {
+        "close": 1000, "sma_short": 990, "sma_long": 980,
+        "distance_from_sma20": -0.178, "relative_strength_13w": 0.05,
+        "sma_short_is_rising": True, "warnings": [],
+    }
+    cfg = {"technical": {"max_distance_from_sma20": 0.15}}
+    result = apply_technical_filter(features, cfg)
+    assert result["passes"] is False
+    assert any("FAIL" in r and "Distance" in r for r in result["reasons"])
+
+
+def test_apply_technical_filter_positive_overshoot():
+    """Stock at distance=0.16 must FAIL the filter (abs >= 0.15)."""
+    from stock_screener.src.pipeline import apply_technical_filter
+    features = {
+        "close": 1150, "sma_short": 1000, "sma_long": 980,
+        "distance_from_sma20": 0.16, "relative_strength_13w": 0.05,
+        "sma_short_is_rising": True, "warnings": [],
+    }
+    cfg = {"technical": {"max_distance_from_sma20": 0.15}}
+    result = apply_technical_filter(features, cfg)
+    assert result["passes"] is False
+    assert any("FAIL" in r and "Distance" in r for r in result["reasons"])

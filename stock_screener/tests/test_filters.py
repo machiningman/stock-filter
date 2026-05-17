@@ -395,7 +395,7 @@ class TestTechnicalFilter:
         result = apply_technical_filter(features, config)
 
         assert result["passes"] is False
-        assert any("Distance from SMA20=0.2000" in r for r in result["reasons"])
+        assert any("|Distance from SMA20|=0.2000" in r for r in result["reasons"])
 
     def test_technical_filter_boundary_distance_exactly_15pct(self, config):
         """Distance == 0.15 fails (strict less-than)."""

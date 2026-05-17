@@ -40,6 +40,8 @@ scoring:
       min: 3.0
       target: 1.0
       inverted: true
+    # NOTE: inverted=true is kept to suppress a config validation warning.
+    # calculate_technical_score() uses its own two-sided formula and ignores this key.
     distance_from_sma20:
       min: 0.15
       target: 0.02

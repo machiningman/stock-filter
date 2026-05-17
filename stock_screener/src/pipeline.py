@@ -499,13 +499,13 @@ def apply_technical_filter(tech_features: dict, config: dict) -> dict:
     if pd.isna(distance):
         reasons.append("FAIL: Distance from SMA20 data is insufficient")
         warnings.append("Insufficient data for Distance from SMA20 calculation")
-    elif distance >= max_distance:
+    elif abs(distance) >= max_distance:
         reasons.append(
-            f"FAIL: Distance from SMA20={distance:.4f} (>= {max_distance:.4f})"
+            f"FAIL: |Distance from SMA20|={abs(distance):.4f} (>= {max_distance:.4f})"
         )
     else:
         reasons.append(
-            f"PASS: Distance from SMA20={distance:.4f} (< {max_distance:.4f})"
+            f"PASS: |Distance from SMA20|={abs(distance):.4f} (< {max_distance:.4f})"
         )
 
     passes = not any(r.startswith("FAIL:") for r in reasons)
@@ -837,7 +837,20 @@ def calculate_technical_score(
     tech_features: dict,
     config: dict,
 ) -> float:
-    """Score technical trend using distance from SMA20.
+    """Score technical trend using absolute deviation from target distance.
+
+    Scoring uses two-sided absolute deviation from zero:
+    - Score 100 when distance equals target (0.02 = 2% above SMA20)
+    - Score 0 when |distance| reaches max boundary (0.15)
+    - Linear interpolation between target and max boundary
+    - Symmetric: +0.15 and -0.15 both score 0
+
+    Formula::
+
+        abs_distance = abs(distance)
+        deviation = max(0, abs_distance - target)
+        max_dev = max_distance - target
+        score = clip(1 - deviation / max_dev, 0, 1) * 100
 
     Parameters
     ----------
@@ -858,12 +871,26 @@ def calculate_technical_score(
         .get("distance_from_sma20", {})
     )
     distance = tech_features.get("distance_from_sma20", float("nan"))
-    return normalize_score(
-        distance,
-        min_val=norm["min"],
-        target_val=norm["target"],
-        inverted=norm.get("inverted", True),
-    )
+
+    if pd.isna(distance):
+        return 0.0
+
+    target = norm["target"]    # 0.02
+    min_val = norm["min"]      # 0.15
+    max_dev = min_val - target  # 0.13
+
+    if abs(max_dev) < 1e-10:
+        logger.warning(
+            "Technical score degenerate range: min=%.4f, target=%.4f — returning 0",
+            min_val,
+            target,
+        )
+        return 0.0
+
+    abs_distance = abs(distance)
+    deviation = max(0.0, abs_distance - target)
+    raw = 1.0 - (deviation / max_dev)
+    return float(np.clip(raw, 0.0, 1.0) * 100.0)
 
 
 def calculate_relative_strength_score(
