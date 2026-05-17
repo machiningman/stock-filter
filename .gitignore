@@ -32,3 +32,6 @@ Thumbs.db
 
 # opencode config (personal)
 .opencode/
+
+# Implementation plans (local only)
+plan/
