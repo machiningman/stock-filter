@@ -480,6 +480,40 @@ class TestFetchPrices:
         assert call_args[0] == "BBCA.JK"
 
     @patch("yfinance.download")
+    def test_fetch_prices_months_override(
+        self, mock_download, tmp_path, valid_config
+    ):
+        """months_override changes the fetched date range."""
+        mock_df = _make_mock_price_df()
+        mock_download.return_value = mock_df
+
+        cache_dir = str(tmp_path / "cache")
+        fetch_prices(["BBCA"], valid_config, cache_dir, months_override=12)
+
+        _, kwargs = mock_download.call_args
+        start = kwargs.get("start") or mock_download.call_args[1]["start"]
+        # 12 months ago should be approximately 365 days before now
+        days_ago = (pd.Timestamp.now() - start).days
+        assert 340 <= days_ago <= 380
+
+    @patch("yfinance.download")
+    def test_fetch_index_months_override(
+        self, mock_download, tmp_path, valid_config
+    ):
+        """months_override changes the fetched date range for index."""
+        mock_df = _make_mock_price_df()
+        mock_download.return_value = mock_df
+
+        cache_dir = str(tmp_path / "cache")
+        fetch_index(valid_config, cache_dir, months_override=24)
+
+        _, kwargs = mock_download.call_args
+        start = kwargs.get("start") or mock_download.call_args[1]["start"]
+        # 24 months ago should be approximately 730 days before now
+        days_ago = (pd.Timestamp.now() - start).days
+        assert 700 <= days_ago <= 760
+
+    @patch("yfinance.download")
     def test_fetch_prices_empty_ticker_list(
         self, mock_download, tmp_path, valid_config
     ):

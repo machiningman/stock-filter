@@ -68,3 +68,8 @@ sectors:
 logging:
   level: "INFO"
   format: "[%(asctime)s] %(levelname)s: %(message)s"
+
+backtest:
+  history_months: 60         # ~260 weeks of price data
+  horizons_weeks: [4, 13]     # 4-week and 13-week forward returns
+  min_warmup_weeks: 60        # covers SMA50 (50w) + RS13w (14w) with margin

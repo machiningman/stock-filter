@@ -453,6 +453,7 @@ def fetch_prices(
     tickers: list[str],
     config: dict,
     cache_dir: str,
+    months_override: int | None = None,
 ) -> dict[str, pd.DataFrame]:
     """
     Fetch price data for a list of tickers with caching.
@@ -468,6 +469,9 @@ def fetch_prices(
         Configuration dictionary with a ``data`` section.
     cache_dir : str
         Directory for caching price data. Created if it does not exist.
+    months_override : int | None
+        If set, overrides ``price_history_months`` from config.
+        When ``None`` (default), the config value is used.
 
     Returns
     -------
@@ -477,7 +481,11 @@ def fetch_prices(
     """
     suffix = config.get("data", {}).get("ticker_suffix", ".JK")
     cache_ttl_days = config.get("data", {}).get("cache_ttl_days", 7)
-    price_history_months = config.get("data", {}).get("price_history_months", 18)
+    price_history_months = (
+        months_override
+        if months_override is not None
+        else config.get("data", {}).get("price_history_months", 18)
+    )
 
     os.makedirs(cache_dir, exist_ok=True)
 
@@ -509,6 +517,7 @@ def fetch_prices(
 def fetch_index(
     config: dict,
     cache_dir: str,
+    months_override: int | None = None,
 ) -> pd.DataFrame:
     """
     Fetch the IHSG index (``^JKSE``) price data with caching.
@@ -519,6 +528,9 @@ def fetch_index(
         Configuration dictionary with a ``data`` section.
     cache_dir : str
         Directory for caching price data. Created if it does not exist.
+    months_override : int | None
+        If set, overrides ``price_history_months`` from config.
+        When ``None`` (default), the config value is used.
 
     Returns
     -------
@@ -527,7 +539,11 @@ def fetch_index(
     """
     index_ticker = config.get("data", {}).get("index_ticker", "^JKSE")
     cache_ttl_days = config.get("data", {}).get("cache_ttl_days", 7)
-    price_history_months = config.get("data", {}).get("price_history_months", 18)
+    price_history_months = (
+        months_override
+        if months_override is not None
+        else config.get("data", {}).get("price_history_months", 18)
+    )
 
     os.makedirs(cache_dir, exist_ok=True)
 

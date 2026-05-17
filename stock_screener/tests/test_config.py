@@ -53,6 +53,7 @@ class TestLoadConfigValid:
             "classification",
             "sectors",
             "logging",
+            "backtest",
         }
         assert expected_keys.issubset(valid_config.keys())
 
@@ -228,6 +229,26 @@ class TestLoadConfigDefaults:
             yaml.dump(cfg, f)
         result = load_config(str(p))
         assert result["logging"]["level"] == "INFO"
+
+    def test_missing_backtest_section_gets_defaults(self, tmp_path):
+        """Missing backtest section gets filled with defaults."""
+        cfg = {
+            "technical": {},
+            "fundamental_non_bank": {},
+            "fundamental_bank": {},
+            "scoring": {},
+            "data": {},
+            "classification": {},
+            "sectors": {},
+            "logging": {},
+        }
+        p = tmp_path / "no_backtest.yaml"
+        with open(p, "w", encoding="utf-8") as f:
+            yaml.dump(cfg, f)
+        result = load_config(str(p))
+        assert result["backtest"]["history_months"] == 60
+        assert result["backtest"]["horizons_weeks"] == [4, 13]
+        assert result["backtest"]["min_warmup_weeks"] == 60
 
 
 class TestWeightsValidation:

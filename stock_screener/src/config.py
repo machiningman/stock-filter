@@ -78,6 +78,12 @@ _LOGGING_DEFAULTS = {
     "format": "[%(asctime)s] %(levelname)s: %(message)s",
 }
 
+_BACKTEST_DEFAULTS = {
+    "history_months": 60,
+    "horizons_weeks": [4, 13],
+    "min_warmup_weeks": 60,
+}
+
 # ---------------------------------------------------------------------------
 # Required top-level keys
 # ---------------------------------------------------------------------------
@@ -245,6 +251,9 @@ def load_config(config_path: str) -> dict:
     )
     config["logging"] = _apply_section_defaults(
         config.get("logging"), _LOGGING_DEFAULTS, "logging"
+    )
+    config["backtest"] = _apply_section_defaults(
+        config.get("backtest"), _BACKTEST_DEFAULTS, "backtest"
     )
 
     # Validation
