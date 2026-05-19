@@ -1,16 +1,20 @@
 # AGENTS.md — Agent Guide for stock-filter
 
 ## Project
+
 Indonesian LQ45 Weekly Stock Screener. Screens stocks using fundamental + technical filters, classifies into 4 categories (Candidate, Watch, Speculative, Avoid), scores 0-100, exports weekly CSV. Screening/reporting only — no auto-trading.
 
 ## Setup
+
 ```bash
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r stock_screener/requirements.txt
 ```
+
 *(On macOS/Linux, use `.venv/bin/python`)*
 
 ## Quick Commands
+
 ```bash
 # Run the screener
 .venv\Scripts\python.exe -m stock_screener.src.main
@@ -29,6 +33,7 @@ python -m venv .venv
 ```
 
 ## Directory Map
+
 ```
 stock_screener/
 ├── config.yaml          # All thresholds (technical, fundamental, classification, scoring, sectors, data, logging, backtest)
@@ -52,6 +57,7 @@ plan/                    # Execution plans (active & completed); gitignored, loc
 ```
 
 ## Golden Principles
+
 1. **Parse data at boundaries** — validate all external data (yfinance, CSV inputs) before use.
 2. **Always add tests** — every new feature or bug fix must include tests.
 3. **Config-driven, not code-driven** — thresholds live in `config.yaml`. Do not hardcode values.
@@ -61,6 +67,7 @@ plan/                    # Execution plans (active & completed); gitignored, loc
 7. **Preserve existing test contracts** — if a test exists, do not change its expected behavior without explicit user approval.
 
 ## Architecture Notes
+
 - `config.py` loads and validates `config.yaml` — the single source of truth for thresholds.
 - `data_io.py` handles yfinance fetches with retry (tenacity), local parquet caching (pyarrow), data validation, and CSV I/O.
 - `pipeline.py` provides composable building blocks. `main.py` orchestrates the full pipeline: load data → apply filters → classify → score → export.
@@ -68,12 +75,14 @@ plan/                    # Execution plans (active & completed); gitignored, loc
 - `backtest_diagnostics.py` analyzes backtest output: per-ticker/year/signal breakdowns, horizon reversal analysis, extreme observations, and failure reasons.
 
 ## Workflow Rules
-1. **Explore first** — use the `explore` subagent to understand existing code before proposing changes.
+
+1. **Explore first** — use the `explore` subagent and Semble MCP to understand existing code before proposing changes.
 2. **Plan non-trivial changes** — create or update a plan in `plan/` before implementing multi-file or architectural changes.
 3. **Self-review, then dispatch reviewers** — review your own diff, then use all 3 `reviewer` subagents (different models) before marking work as complete.
 4. **Update docs with code** — if behavior changes, update relevant docs/comments in the same PR.
 
 ## Where to Find More
+
 - **Architecture:** `ARCHITECTURE.md` (module dependencies, data flow, function map, scoring/bank tables)
 - **Execution plans:** `plan/` directory (active plans, completed plans, tech debt)
 - **Configuration reference:** `stock_screener/config.yaml`

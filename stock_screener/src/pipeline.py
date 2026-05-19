@@ -481,19 +481,24 @@ def apply_technical_filter(tech_features: dict, config: dict) -> dict:
         reasons.append(f"PASS: Close={close} > SMA50={sma_long}")
 
     # 3. SMA20 rising
-    if not sma_rising:
+    require_rising = tech_cfg.get("require_sma20_rising", True)
+    if require_rising and not sma_rising:
         reasons.append("FAIL: SMA20 is not rising")
-    else:
+    elif require_rising:
         reasons.append("PASS: SMA20 is rising")
 
-    # 4. RS > 0
+    # 4. RS checks (config-driven min/max)
+    min_rs = tech_cfg.get("min_relative_strength_13w", 0.0)
+    max_rs = tech_cfg.get("max_relative_strength_13w", None)
     if pd.isna(rs):
         reasons.append("FAIL: Relative Strength data is insufficient")
         warnings.append("Insufficient data for Relative Strength calculation")
-    elif rs <= 0:
-        reasons.append(f"FAIL: Relative Strength={rs} (below 0)")
+    elif rs <= min_rs:
+        reasons.append(f"FAIL: Relative Strength={rs} (<= min {min_rs})")
+    elif max_rs is not None and rs >= max_rs:
+        reasons.append(f"FAIL: Relative Strength={rs} (>= max {max_rs})")
     else:
-        reasons.append(f"PASS: Relative Strength={rs} (above 0)")
+        reasons.append(f"PASS: Relative Strength={rs} (> min {min_rs})")
 
     # 5. Distance from SMA20 < max_distance
     if pd.isna(distance):

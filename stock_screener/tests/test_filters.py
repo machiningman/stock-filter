@@ -387,7 +387,7 @@ class TestTechnicalFilter:
         result = apply_technical_filter(features, config)
 
         assert result["passes"] is False
-        assert any("Relative Strength=-0.05 (below 0)" in r for r in result["reasons"])
+        assert any("Relative Strength=-0.05 (<= min 0.0)" in r for r in result["reasons"])
 
     def test_technical_filter_fail_too_far_from_sma(self, config):
         """Distance > 15% → fails."""
@@ -438,7 +438,7 @@ class TestTechnicalFilter:
         result = apply_technical_filter(features, config)
 
         assert result["passes"] is False
-        assert any("Relative Strength=0.0 (below 0)" in r for r in result["reasons"])
+        assert any("Relative Strength=0.0 (<= min 0.0)" in r for r in result["reasons"])
 
     def test_technical_filter_custom_max_distance(self, config):
         """Custom max_distance_from_sma20 from config is respected."""
@@ -511,3 +511,30 @@ class TestTechnicalFilter:
         incomplete_config["technical"] = {"sma_short": 20, "sma_long": 50}
         with pytest.raises(KeyError):
             apply_technical_filter(tech_features, incomplete_config)
+
+    def test_technical_filter_sma_rising_not_required(self, config):
+        """require_sma20_rising=False skips SMA20 rising check; stock can pass without rising SMA20."""
+        config["technical"]["require_sma20_rising"] = False
+        features = _passing_tech_features(sma_short_is_rising=False)
+        result = apply_technical_filter(features, config)
+
+        assert result["passes"] is True
+        assert not any("SMA20 is not rising" in r for r in result["reasons"])
+        assert not any("SMA20 is rising" in r for r in result["reasons"])
+        assert len(result["reasons"]) == 4
+
+    def test_technical_filter_rs_max_bound(self, config):
+        """max_relative_strength_13w filters stocks with RS above the threshold."""
+        config["technical"]["max_relative_strength_13w"] = 0.03
+        # RS=0.05 >= max 0.03 → should fail
+        features = _passing_tech_features(relative_strength_13w=0.05)
+        result = apply_technical_filter(features, config)
+
+        assert result["passes"] is False
+        assert any("Relative Strength=0.05 (>= max 0.03)" in r for r in result["reasons"])
+
+        # RS=0.02 < max 0.03 and > min 0.0 → should pass
+        features2 = _passing_tech_features(relative_strength_13w=0.02)
+        result2 = apply_technical_filter(features2, config)
+        assert result2["passes"] is True
+        assert any("Relative Strength=0.02 (> min 0.0)" in r for r in result2["reasons"])

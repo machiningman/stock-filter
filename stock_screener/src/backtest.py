@@ -449,6 +449,64 @@ def generate_backtest_reports(
     return os.path.abspath(trades_path), os.path.abspath(summary_path)
 
 
+def run_evaluation(
+    config: dict,
+    universe_df: pd.DataFrame,
+    stock_weekly_data: dict[str, pd.DataFrame],
+    index_weekly: pd.DataFrame,
+    eval_dates: list[pd.Timestamp],
+    horizons: list[int],
+) -> pd.DataFrame:
+    """
+    Run technical filter evaluation over all ticker-date pairs.
+
+    Parameters
+    ----------
+    config : dict
+        Full configuration dictionary.
+    universe_df : pd.DataFrame
+        LQ45 universe data with columns: ticker, company_name, sector.
+    stock_weekly_data : dict[str, pd.DataFrame]
+        Per-ticker weekly OHLCV DataFrames.
+    index_weekly : pd.DataFrame
+        Weekly index OHLCV DataFrame.
+    eval_dates : list[pd.Timestamp]
+        Sorted list of valid evaluation dates.
+    horizons : list[int]
+        Forward return horizons in weeks.
+
+    Returns
+    -------
+    pd.DataFrame
+        Trade-level DataFrame with one row per ticker-date observation.
+    """
+    all_results: list[dict[str, Any]] = []
+
+    for date in eval_dates:
+        for _, stock_row in universe_df.iterrows():
+            ticker = stock_row["ticker"]
+            stock_weekly = stock_weekly_data.get(ticker, pd.DataFrame())
+
+            try:
+                result = evaluate_ticker_on_date(
+                    ticker,
+                    stock_row,
+                    stock_weekly,
+                    index_weekly,
+                    date,
+                    horizons,
+                    config,
+                )
+                if result is not None:
+                    all_results.append(result)
+            except Exception as exc:
+                logger.warning(
+                    "Error evaluating %s on %s: %s", ticker, date.strftime("%Y-%m-%d"), exc
+                )
+
+    return pd.DataFrame(all_results)
+
+
 def run_technical_backtest() -> None:
     """
     Run the full technical-only historical backtest.
@@ -518,35 +576,15 @@ def run_technical_backtest() -> None:
     logger.info(
         "Evaluating %d tickers across %d dates...", len(tickers), len(eval_dates)
     )
-    all_results: list[dict[str, Any]] = []
 
-    for date in eval_dates:
-        for _, stock_row in universe_df.iterrows():
-            ticker = stock_row["ticker"]
-            stock_weekly = stock_weekly_data.get(ticker, pd.DataFrame())
+    trades_df = run_evaluation(
+        config, universe_df, stock_weekly_data, index_weekly, eval_dates, horizons
+    )
 
-            try:
-                result = evaluate_ticker_on_date(
-                    ticker,
-                    stock_row,
-                    stock_weekly,
-                    index_weekly,
-                    date,
-                    horizons,
-                    config,
-                )
-                if result is not None:
-                    all_results.append(result)
-            except Exception as exc:
-                logger.warning(
-                    "Error evaluating %s on %s: %s", ticker, date.strftime("%Y-%m-%d"), exc
-                )
-
-    if not all_results:
+    if trades_df.empty:
         logger.warning("No valid observations generated. Exiting.")
         sys.exit(1)
 
-    trades_df = pd.DataFrame(all_results)
     logger.info("Generated %d observations", len(trades_df))
 
     # --- Generate reports ---

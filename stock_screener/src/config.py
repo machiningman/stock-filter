@@ -24,6 +24,9 @@ _TECHNICAL_DEFAULTS = {
     "max_distance_from_sma20": 0.15,
     "relative_strength_weeks": 13,
     "sma_rising_lookback": 3,
+    "min_relative_strength_13w": 0.0,
+    "max_relative_strength_13w": None,
+    "require_sma20_rising": True,
 }
 
 _FUNDAMENTAL_NON_BANK_DEFAULTS = {
